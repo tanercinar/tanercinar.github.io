@@ -30,13 +30,13 @@ Fazla Mermi
 
 Delici Mermi
 
-Hızlı Şarj
+Hızlı Mermi Doldurma
 
 Ekstra Can
 
 Dağılımlı Ateş
 
-Düşman güçlendirmeleri:
+Düşman Güçlendirmeleri:
 
 Büyük Boyut
 
