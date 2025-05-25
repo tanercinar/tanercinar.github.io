@@ -1,4 +1,4 @@
-AI dışında kıullandığım ana kaynak:
+AI dışında kullandığım ana kaynak:
 https://www.youtube.com/watch?v=qJifBL1IfrU&list=PL9hmM3XvpAKqaJKvk2667MsF9oPDkIl_-
 
 
