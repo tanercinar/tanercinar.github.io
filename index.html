@@ -103,8 +103,7 @@
         dolumZamani: 0,
         dolumSuresi: 60,
         sonAtisZamani: 0,
-        atisBeklemeSuresi: 9
-    };
+        atisBeklemeSuresi: 9 };
 
     //oyuncunun ateşlediği merminin bilgilerini içeren sınıf
     class Mermi {
@@ -117,7 +116,7 @@
             this.renk = renk;
             this.sahip = sahip;
             this.gecenMermi = false;
-        }
+          }
 
         // mermi hareketini güncelleyen fonksiyon
         guncelle() { 
@@ -129,14 +128,13 @@
         ciz() {
             ctx.fillStyle = this.renk;
             ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2, this.boyut, this.boyut);
-        }
+      }
 
         // merminin ekran dışında olma durumunu kontrol eden fonksiyon   
         ekranDisinda() {
             return this.x + this.boyut/2 < 0 || this.x - this.boyut/2 > canvasWidth ||
                    this.y + this.boyut/2 < 0 || this.y - this.boyut/2 > canvasHeight;
-        }
-    }
+      }}
     let oyuncuMermileri = [];
     let dusmanMermileri = [];
 
@@ -198,8 +196,7 @@
 
         if (oyuncu.mermi <= 0) {
             silahiDoldur();
-        }
-    }
+        }}
     //ozellik alınca gelen ates etme biçimi, 3 mermi atesliyor onun dışında normal ateş et fonksiyonuyla aynı
     function pompaliAtesEt(hedefX, hedefY) {
         if (oyuncu.yenidenDolduruluyor) return;
@@ -207,7 +204,7 @@
         if (oyuncu.mermi <= 0) {
             silahiDoldur();
             return;
-          }
+        }
 
         atesSesiCal();
         oyuncu.mermi--;
@@ -245,12 +242,11 @@
                 '#ffff00', 
                 'oyuncu'
             ));
-          }
+        }
 
         if (oyuncu.mermi <= 0) {
             silahiDoldur();
-    }
-    }
+        }}
 
     function atesEt(hedefX, hedefY) {
         // ozelliğin olup olmadığının kontrolü
@@ -260,8 +256,7 @@
             pompaliAtesEt(hedefX, hedefY);
         } else {
             normalAtesEt(hedefX, hedefY);
-        }
-    }
+        }}
 
     function silahiDoldur() {
         if (oyuncu.yenidenDolduruluyor || oyuncu.mermi === oyuncu.maxMermi) return;
@@ -307,13 +302,12 @@
                 oyuncu.can -= 1;
                 //temasta direk ölmesi için yüksek bir hasar alma değeri
                 this.hasarAl(10);
-            }
-        }
+        }}
 
         //mermi ile düşmana hasar veren fonksiyon
         hasarAl(miktar = 1) { 
             this.can -= miktar; 
-}
+        }
 
         //düşmanı ekrana çizen fonksiyon
         ciz() {
@@ -325,9 +319,7 @@
                 ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2 - 10, this.boyut, 5);
             ctx.fillStyle = 'lime';
                 ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2 - 10, this.boyut * (this.can / this.baslangicCan), 5);
-            }
-        }
-    }
+        }}}
 
     //kırmızı düşman sınıfı
     class KirmiziDusman extends Dusman {
@@ -382,9 +374,7 @@
                 this.kosmaMesafesi = 120 + Math.random() * 60; 
                 this.beklemeZamani = Math.floor(40 + Math.random() * 50); 
                 this.yon = this.rastgeleYonAl(); 
-            } 
-        }
-    }
+            }}}
 
     //sürekli hareket eden yesil dusman sınıfı
     class YesilDusman extends Dusman {
@@ -402,8 +392,7 @@
             if (this.x - yariBoyut < 0 || this.x + yariBoyut > canvasWidth) this.vx *= -1; 
             if (this.y - yariBoyut < 0 || this.y + yariBoyut > canvasHeight) this.vy *= -1; 
             this.ekranaSinirla(); 
-        }
-    }
+        }}
 
     //ateş eden pembe düşman sınıfı
     class PembeDusman extends Dusman {
@@ -430,8 +419,7 @@
             if (++this.atesZamani >= this.atesAraligi) { 
                 this.atesZamani = 0; 
                 this.mermiAt(); 
-            } 
- }
+            }}
 
         //ateş mekaniği
         mermiAt() { 
@@ -440,9 +428,7 @@
                 const yayilma = (Math.random() - 0.5) * 0.5; 
                 const sonAci = oyuncuyaAci + yayilma; 
                 dusmanMermileri.push(new Mermi(this.x, this.y, Math.cos(sonAci)*4, Math.sin(sonAci)*4, '#ff00ff', 'dusman')); 
-            }
-        }
-    }
+            }}}
 
     //Boss sınıfı
     class Boss extends Dusman {
@@ -476,8 +462,7 @@
                 this.y = this.hedefY;
             }
             this.ekranaSinirla();
-        }
-    }
+        }}
     let tumDusmanlar = [];//düşmanların bilgilerini tutan dizi
 
     let mevcutSeviye = 1;//mevcut oyun seviyesi
@@ -496,7 +481,7 @@
         hedefSeviye: 0,
         dalgaBoyutu: 0,
         nabizHizi: 0.1
-                  };
+    };
 
     //seviye ayarları ve düşman özellikleri
     const seviyeAyarlari = [
@@ -579,7 +564,8 @@
                     oyunDurumu = OYUN_DURUMU.ZAFER;
                 } else {
                     yeniSeviyeBaslat(mevcutSeviye);
-                }  }
+                }
+            }
             return;
         }
 
@@ -604,8 +590,8 @@
                     can: dogumGrubu.can || 3,
                     boyut: dogumGrubu.boyut || 40,
                     renk: dogumGrubu.renk || 'gray'
-                }); }
-        });
+                });
+            }});
 
         setTimeout(() => {
             if (oyunDurumu !== OYUN_DURUMU.OYNUYOR) return;
@@ -621,7 +607,7 @@
                 if (dusmanBoyutOzellik > 0) {
                     const boyutArtisi = 1 + (dusmanBoyutOzellik * 0.3);
                     dusman.boyut = Math.round(dusman.boyut * boyutArtisi);
-  }
+                }
                 
                 if (dusmanHizOzellik > 0) {
                     const hizArtisi = 1 + (dusmanHizOzellik * 0.4);
@@ -651,7 +637,7 @@
             });
             console.log(`Seviye ${mevcutSeviye} - Dalga ${mevcutDalga}: ${dalgadaKalanDusmanlar} düşman oluşturuldu.`);
         }, 1000);
-    }
+      }
 
     //sonraki dalgayı başlatır
     function sonrakiDalgaBaslat() {
@@ -661,8 +647,8 @@
             return;
         }
         dalgaIcinDusmanlariOlustur();
-        }
-
+      }
+  
     //yeni seviyeyi başlatır
     function yeniSeviyeBaslat(seviyeNumarasi) {
         mevcutSeviye = seviyeNumarasi;
@@ -686,15 +672,14 @@
         //seviye sonunda rastgele özellik seç
         if (!BossSeviyesiMi()) {
             rastgeleOzellikSec();
-              }
-    
+      }
+
         //son boss'tan sonra oyunu bitir
         if (mevcutSeviye >= seviyeAyarlari.length) {
             oyunDurumu = OYUN_DURUMU.ZAFER;
             canvas.classList.remove('playing');
-  }
-        }
-    
+      }}
+
     //son alınan özellikleri tutan dizi
     let sonAlinanOzellikler = [];
     let ozellikGosterimZamani = 0;
@@ -702,11 +687,11 @@
 
     //oyuncu özellikleri
     let hizliHareketOzellik = 0;
-    let fazlaMermiOzellik = false;
+    let fazlaMermiOzellik = 0;
     let gecenMermiOzellik = false;
     let hizliDolumOzellik = 0;
     let ekstraCanOzellik = 0;
-    let pompaliAtesOzellik = false;
+    let pompaliAtesOzellik = 0;
 
     //düşman özellikleri
     let dusmanBoyutOzellik = 0;
@@ -718,7 +703,7 @@
         //yeni özellik bildirimi süresini güncelle
         if (ozellikGosterimZamani > 0) {
             ozellikGosterimZamani--;
-            }
+        }
 
         //oyun oynanmıyorsa güncellemeyi durdur
         if (oyunDurumu !== OYUN_DURUMU.OYNUYOR) {
@@ -731,7 +716,7 @@
         //atış bekleme süresini güncelle
         if (oyuncu.sonAtisZamani > 0) {
             oyuncu.sonAtisZamani--;
-        }
+          }
 
         //dolum işlemini kontrol et
         if (oyuncu.yenidenDolduruluyor) {
@@ -740,12 +725,12 @@
                 oyuncu.mermi = oyuncu.maxMermi;
                 oyuncu.yenidenDolduruluyor = false;
                 console.log("Dolum tamamlandı!");
-            }
-              }
+        }}
 
         //r tuşu ile şarjör değiştirme
         if (tuslar['r'] && !oyuncu.yenidenDolduruluyor && oyuncu.mermi < oyuncu.maxMermi) {
-            silahiDoldur();}
+            silahiDoldur();
+        }
 
         //oyuncu hareketi
         if (tuslar['a']) oyuncu.x -= oyuncu.hiz;
@@ -761,7 +746,7 @@
         for (let i = oyuncuMermileri.length - 1; i >= 0; i--) {
             oyuncuMermileri[i].guncelle();
             if (oyuncuMermileri[i].ekranDisinda()) oyuncuMermileri.splice(i, 1);
-        }
+          }
 
         //düşman mermilerini güncelle
         for (let i = dusmanMermileri.length - 1; i >= 0; i--) {
@@ -771,8 +756,7 @@
             } else if (Math.hypot(dusmanMermileri[i].x - oyuncu.x, dusmanMermileri[i].y - oyuncu.y) < dusmanMermileri[i].boyut / 2 + oyuncu.boyut / 2) {
                 oyuncu.can--;
                 dusmanMermileri.splice(i, 1);
-            }
-   }
+                }}
 
         //düşmanları güncelle
         let buKaredeDusmanOlduMu = false;
@@ -792,8 +776,7 @@
                         oyuncuMermileri.splice(mi, 1);
                     }
                     break;
-            }
-            }
+                }}
             
             //düşman oyuncu çarpışma kontrolü
             dusman.oyuncuylaCarpisiyor();
@@ -801,9 +784,7 @@
                 tumDusmanlar.splice(ei, 1);
                 dalgadaKalanDusmanlar--;
                 buKaredeDusmanOlduMu = true;
-            }
-              }
-
+            }}
         //dalga kontrolü
         if (buKaredeDusmanOlduMu && dalgadaKalanDusmanlar <= 0 && mevcutDalga > 0 && !portal.aktif) {
             if (mevcutDalga >= mevcutSeviyedekiDalgaSayisi()) {
@@ -811,7 +792,6 @@
             } else {
                 sonrakiDalgaBaslat();
             }}
-
         //portal kontrolü
         if (portal.aktif) {
             portal.dalgaBoyutu += portal.nabizHizi;
@@ -821,15 +801,14 @@
                     oyunDurumu = OYUN_DURUMU.ZAFER;
                     canvas.classList.remove('playing');
                 } else {
-                    yeniSeviyeBaslat(portal.hedefSeviye);}}}
-
+                    yeniSeviyeBaslat(portal.hedefSeviye);
+                }}}
         //oyuncu öldüyse oyunu bitir
         if (oyuncu.can <= 0) {
             oyuncu.can = 0;
             oyunDurumu = OYUN_DURUMU.OYUN_BITTI;
             canvas.classList.remove('playing');
-        }
-    }
+        }}
 
     //başlangıç ekranını çizer
     function baslangicEkraniCiz() {
@@ -848,7 +827,7 @@
         ctx.fillText('R: Silahi Yeniden Doldur', canvasWidth/2, canvasHeight/2 + 130);
         ctx.fillText('T: Aktif Özellikleri Göster', canvasWidth/2, canvasHeight/2 + 160);
         ctx.fillText('Kazanmak için 12. bölümün sonundaki boss\'u yenin!', canvasWidth / 2, canvasHeight / 2 + 190);
-        }
+    }
 
     //oyun bitti ekranını çizer
     function oyunBittiEkraniCiz() {
@@ -861,7 +840,8 @@
         ctx.font = '60px Arial';
         ctx.fillText('Oyun Bitti!', canvasWidth / 2, canvasHeight / 2 - 50);
         ctx.font = '30px Arial';
-        ctx.fillText('Tekrar Başlamak için Tıkla', canvasWidth / 2, canvasHeight / 2 + 30);}
+        ctx.fillText('Tekrar Başlamak için Tıkla', canvasWidth / 2, canvasHeight / 2 + 30);
+            }
 
     //zafer ekranını çizer
     function zaferEkraniCiz() {
@@ -884,7 +864,8 @@
             ctx.fillText('Son Boss Yenildi!', canvasWidth / 2, canvasHeight / 2 + 120);
             ctx.font = '25px Arial';
             ctx.fillText('Tebrikler! Oyunu Başarıyla Tamamladınız!', canvasWidth / 2, canvasHeight / 2 + 170);
-        }}
+        }
+    }
 
     //oyun ekranını çizer
     function oyunuCiz() {
@@ -908,9 +889,9 @@
                 ctx.beginPath();
                 ctx.arc(portal.x, portal.y, (mevcutPortalBoyutu / 2) * (0.8 - i*0.2) + Math.sin(portal.dalgaBoyutu + i) * 3, 0, Math.PI*2);
                 ctx.stroke();
-                }
+            }
             ctx.globalAlpha = 1.0;
-    }
+          }
 
         //yeni özellik bildirimi
         if (ozellikGosterimZamani > 0) {
@@ -922,7 +903,7 @@
             ctx.textAlign = 'center';
             ctx.font = '24px Arial';
             ctx.fillText('Yeni Özellik Kazanıldı!', canvasWidth/2, canvasHeight/2 - 60);
-                }
+          }
 
         //t tuşuna basılıyken özellikleri göster
         if (tuslar['t']) {
@@ -977,7 +958,7 @@
             ctx.textAlign = 'center';
             ctx.font = '16px Arial';
             ctx.fillText('T tuşunu bırakınca kapanır', canvasWidth/2, canvasHeight/2 + 160);
-          }
+        }
 
         //normal hud bilgileri
         ctx.fillStyle = 'white';
@@ -1000,8 +981,7 @@
             ctx.fillText(`Düşmanlar: ${dalgadaKalanDusmanlar}`, canvasWidth - 10, 60);
         } else if (portal.aktif) {
             ctx.fillText(`Portal Aktif!`, canvasWidth - 10, 35);
-        }
-    }
+        }}
 
     //oyun durumuna göre ekranı çizer
     function ciz() {
@@ -1009,18 +989,17 @@
         if (oyunDurumu === OYUN_DURUMU.BASLANGIC_EKRANI) baslangicEkraniCiz();
         else if (oyunDurumu === OYUN_DURUMU.OYNUYOR) oyunuCiz();
         else if (oyunDurumu === OYUN_DURUMU.OYUN_BITTI) { oyunuCiz(); oyunBittiEkraniCiz(); }
-        else if (oyunDurumu === OYUN_DURUMU.ZAFER) { zaferEkraniCiz(); }
-    }
+        else if (oyunDurumu === OYUN_DURUMU.ZAFER) { zaferEkraniCiz(); }}
 
     //oyuncuyu sıfırlar
     function oyuncuyuSifirla() {
         //tüm özellikleri sıfırla
         hizliHareketOzellik = 0;
-        fazlaMermiOzellik = false;
+        fazlaMermiOzellik = 0;
         gecenMermiOzellik = false;
         hizliDolumOzellik = 0;
         ekstraCanOzellik = 0;
-        pompaliAtesOzellik = false;
+        pompaliAtesOzellik = 0;
         dusmanBoyutOzellik = 0;
         dusmanHizOzellik = 0;
         dusmanCanOzellik = 0;
@@ -1089,7 +1068,7 @@
             const secilenOzellik = kullanilabilirDusmanOzellikleri[rastgeleIndex];
             ozellikUygula(secilenOzellik, 'dusman');
         }
-}
+    }
 
     //seçilen özelliği uygular
     function ozellikUygula(ozellik, tip) {
@@ -1106,7 +1085,7 @@
                     oyuncu.hiz = 5 * (1 + (hizliHareketOzellik * 0.5));
                     break;
                 case 'FAZLA_MERMI':
-                    fazlaMermiOzellik = true;
+                    fazlaMermiOzellik++;
                     oyuncu.maxMermi = 10 + (fazlaMermiOzellik ? 5 : 0);
                     oyuncu.mermi = oyuncu.maxMermi;
                     break;
@@ -1123,9 +1102,9 @@
                     oyuncu.can = oyuncu.baslangicCan;
                     break;
                 case 'POMPALI_ATES':
-                    pompaliAtesOzellik = true;
+                    pompaliAtesOzellik++;
                     break;
-      }
+            }
             //oyuncu özelliği alındığında diziye ekle
             sonAlinanOzellikler.push({ ...ozellik, tip });
         } else {
@@ -1175,7 +1154,7 @@
             ctx.fillText(`Hareket hızı %${hizliHareketOzellik * 50} artar`, 70, y + 25);
             y += 60;
         }
-        if (fazlaMermiOzellik) {
+        if (fazlaMermiOzellik > 0) {
             ctx.font = '20px Arial';
             ctx.fillText('✓ Fazla Mermi (1X)', 70, y);
             ctx.font = '16px Arial';
@@ -1203,7 +1182,7 @@
             ctx.fillText(`Maksimum can ${ekstraCanOzellik} artar`, 70, y + 25);
             y += 60;
         }
-        if (pompaliAtesOzellik) {
+        if (pompaliAtesOzellik > 0) {
             ctx.font = '20px Arial';
             ctx.fillText('✓ Dağılımlı Ateş (1X)', 70, y);
             ctx.font = '16px Arial';
@@ -1215,7 +1194,7 @@
             !hizliDolumOzellik && !ekstraCanOzellik && !pompaliAtesOzellik) {
             ctx.fillText('Oyuncu özelliği yok', 70, y);
             y += 60;
-        }
+  }
         
         //düşman özellikleri
         y = 170;
@@ -1245,17 +1224,17 @@
             ctx.font = '16px Arial';
             ctx.fillText(`Düşmanlar ${dusmanCanOzellik} can daha fazla başlar`, canvasWidth - 70, y + 25);
             y += 60;
-        }
+       }
         
         if (dusmanBoyutOzellik === 0 && dusmanHizOzellik === 0 && dusmanCanOzellik === 0) {
             ctx.fillText('Düşman özelliği yok', canvasWidth - 70, y);
-        }
+          }
 
         //t tuşu bilgisi
         ctx.textAlign = 'center';
         ctx.font = '16px Arial';
         ctx.fillText('T tuşunu bırakınca kapanır', canvasWidth/2, canvasHeight - 55);
-    }
+          }
 
     oyunDongusu();
   </script>
