@@ -65,7 +65,6 @@ Düşmanların canı ve sayısı artar, yeni düşman türleri belirir.
 
 Boss seviyelerinde sabit olmayan, strateji gerektiren hareket şemaları.
 
-Ses efektleri ve müzik
 
 # Teknik Detaylar
 Canvas API ile grafik çizimi
