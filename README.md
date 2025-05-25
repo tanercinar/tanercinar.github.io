@@ -43,7 +43,6 @@ Fazla Can
 
 Geri tepme mekaniği: Her atış oyuncuyu geri savurur
 
-Ses efektleri ve müzik
 
 # Nasıl Oynanır
 Oyunu başlatmak için ekrana tıklayın.
@@ -58,15 +57,15 @@ T tuşuna basılı tutarak aktif özellikleri görüntüleyin.
 
 Tüm dalga düşmanları temizleyip portalı aktif hale getirin, portala girerek bir sonraki seviyeye geçin.
 
-# Oynanış Videosu
-[https://youtu.be/… (oyun içi demo kaydınızı buraya ekleyin)](https://www.youtube.com/watch?v=GN4P6Wfc-M4)
 
-Zorluk
+# Zorluk
 Her seviye sonunda düşman dalgaları ve özellikleri rastgele güçlendirilir.
 
 Boss seviyelerinde sabit olmayan, strateji gerektiren hareket paternleri.
 
-Teknik Detaylar
+Ses efektleri ve müzik
+
+# Teknik Detaylar
 Canvas API ile grafik çizimi
 
 Saf JavaScript (ES6 sınıfları, modüler yapı)
@@ -75,6 +74,9 @@ Kullanılan Sesler
 Arka Plan Müziği: https://pixabay.com/music/video-games-fight-for-the-future-336841/
 
 Ateş Sesi: https://pixabay.com/sound-effects/086409-retro-gun-shot-81545/
+
+# Oynanış Videosu
+https://www.youtube.com/watch?v=GN4P6Wfc-M4
 
 # Ekran Görüntüleri
 
