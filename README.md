@@ -44,9 +44,6 @@ Hızlı Düşman
 
 Fazla Can
 
-Geri tepme mekaniği: Her atış oyuncuyu geri savurur
-
-
 # Nasıl Oynanır
 Oyunu başlatmak için ekrana tıklayın.
 
@@ -58,7 +55,7 @@ R ile şarjör doldurun veya boşken otomatik sarj başlar.
 
 T tuşuna basılı tutarak aktif özellikleri görüntüleyin.
 
-Tüm dalga düşmanları temizleyip portalı aktif hale getirin, portala girerek bir sonraki seviyeye geçin.
+Tüm düşman dalgalarını temizleyip portalı aktif hale getirin, portala girerek bir sonraki seviyeye geçin.
 
 
 # Zorluk
@@ -66,16 +63,18 @@ Her seviye sonunda hem oyuncu düşman dalgaları ve özellikleri rastgele güç
 
 Düşmanların canı ve sayısı artar, yeni düşman türleri belirir.
 
-Boss seviyelerinde sabit olmayan, strateji gerektiren hareket paternleri.
+Boss seviyelerinde sabit olmayan, strateji gerektiren hareket şemaları.
 
 Ses efektleri ve müzik
 
 # Teknik Detaylar
 Canvas API ile grafik çizimi
 
-JavaScript
+JavaScript ile nesne yönelimli programlama
 
-Kullanılan Sesler
+HTML5 ses sistemi entegrasyonu
+
+# Kullanılan Sesler
 Arka Plan Müziği: https://pixabay.com/music/video-games-fight-for-the-future-336841/
 
 Ateş Sesi: https://pixabay.com/sound-effects/086409-retro-gun-shot-81545/
