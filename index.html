@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adil Kareler</title>
+  <style>
+    body { margin: 0; overflow: hidden; position: relative; height: 100vh; background: #1f1029; }
+    #gameCanvas {
+      background: #390947;
+      position: absolute;
+      width: 800px;
+      height: 600px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+    }
+    #gameCanvas.playing {
+        cursor: crosshair;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <audio id="arkaPlanMuzigi" loop>
+    <source src="fight-for-the-future-336841.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="atesSesi">
+    <source src="086409_retro-gun-shot-81545.mp3" type="audio/mpeg">
+  </audio>
+  <script>
+    //canvas ve müzik sabitleri
+    const canvasWidth = 800;
+    const canvasHeight = 600;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const arkaPlanMuzigi = document.getElementById('arkaPlanMuzigi');
+    const atesSesi = document.getElementById('atesSesi');
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    // durumlar
+    const OYUN_DURUMU = {
+        BASLANGIC_EKRANI: 'BASLANGIC_EKRANI',
+        OYNUYOR: 'OYNUYOR',
+        OYUN_BITTI: 'OYUN_BITTI',
+        ZAFER: 'ZAFER'
+    };
+
+    //oyuncu özellikleri
+    const OYUNCU_OZELLIKLERI_HAVUZU = [
+        { key: 'HIZLI_HAREKET', ad: 'Hızlı Hareket', aciklama: 'Hareket hızı %50 artar', aktif: false },
+        { key: 'FAZLA_MERMI', ad: 'Fazla Mermi', aciklama: 'Maksimum mermi sayısı 5 artar', aktif: false },
+        { key: 'GECEN_MERMI', ad: 'Geçen Mermi', aciklama: 'Mermiler düşmanların içinden geçer', aktif: false },
+        { key: 'HIZLI_DOLUM', ad: 'Hızlı Dolum', aciklama: 'Dolum süresi %30 azalır', aktif: false },
+        { key: 'EKSTRA_CAN', ad: 'Ekstra Can', aciklama: 'Maksimum can 1 artar', aktif: false },
+        { key: 'POMPALI_ATES', ad: 'Dağılımlı Ateş', aciklama: 'Her atışta 3 mermi dağılımlı şekilde atılır', aktif: false }
+    ];
+
+    //düşman özellikleri
+    const DUSMAN_OZELLIKLERI_HAVUZU = [
+        { key: 'BUYUK_BOYUT', ad: 'Büyük Boyut', aciklama: 'Düşmanlar %30 daha büyük olur', aktif: false },
+        { key: 'HIZLI_DUSMAN', ad: 'Hızlı Düşman', aciklama: 'Düşmanlar %40 daha hızlı hareket eder', aktif: false },
+        { key: 'FAZLA_CAN', ad: 'Fazla Can', aciklama: 'Düşmanlar 1 can daha fazla başlar', aktif: false }
+    ];
+
+    let oyunDurumu = OYUN_DURUMU.BASLANGIC_EKRANI;
+
+    let tuslar = {};
+    window.addEventListener('keydown', e => tuslar[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', e => tuslar[e.key.toLowerCase()] = false);
+    window.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const tikX = e.clientX - rect.left;
+      const tikY = e.clientY - rect.top;
+
+      if (oyunDurumu === OYUN_DURUMU.BASLANGIC_EKRANI || oyunDurumu === OYUN_DURUMU.ZAFER) {
+          oyunuBaslat();
+      } else if (oyunDurumu === OYUN_DURUMU.OYNUYOR) {
+          atesEt(tikX, tikY);
+      } else if (oyunDurumu === OYUN_DURUMU.OYUN_BITTI) {
+          oyunuBaslat();
+      }
+    });
+
+    const oyuncu = {
+        //oyuncu başlangıç koordinatları
+      x: canvasWidth/2,
+      y: canvasHeight/2,
+        //oyuncu boyut ve hızı
+        boyut: 40,
+        hiz: 5,
+        renk: '#6e80fa',
+        //oyuncu can bilgileri
+        can: 3,
+        baslangicCan: 3,
+        //oyuncu mermi bilgileri
+        mermi: 10,
+        maxMermi: 10,
+        yenidenDolduruluyor: false,
+        dolumZamani: 0,
+        dolumSuresi: 60,
+        sonAtisZamani: 0,
+        atisBeklemeSuresi: 9
+    };
+
+    //oyuncunun ateşlediği merminin bilgilerini içeren sınıf
+    class Mermi {
+        constructor(x, y, vx, vy, renk = '#ffff00', sahip = 'oyuncu') {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.boyut = 30;
+            this.renk = renk;
+            this.sahip = sahip;
+            this.gecenMermi = false;
+        }
+
+        // mermi hareketini güncelleyen fonksiyon
+        guncelle() { 
+            this.x += this.vx; 
+            this.y += this.vy; 
+        }
+
+        // mermiyi ekrana çizen fonksiyon
+        ciz() {
+            ctx.fillStyle = this.renk;
+            ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2, this.boyut, this.boyut);
+        }
+
+        // merminin ekran dışında olma durumunu kontrol eden fonksiyon   
+        ekranDisinda() {
+            return this.x + this.boyut/2 < 0 || this.x - this.boyut/2 > canvasWidth ||
+                   this.y + this.boyut/2 < 0 || this.y - this.boyut/2 > canvasHeight;
+        }
+    }
+    let oyuncuMermileri = [];
+    let dusmanMermileri = [];
+
+    //müziğin bitmemesi için döngü
+    const muzikDongusu = new Audio("fight-for-the-future-336841.mp3");
+    muzikDongusu.volume = 0.3;
+    muzikDongusu.loop = true;
+
+    //müziği çalmaya başlayan fonksiyon
+    function muzikBaslat() {
+        arkaPlanMuzigi.volume = 0.3;
+        arkaPlanMuzigi.loop = true;
+        arkaPlanMuzigi.play().catch(e => console.log("Müzik başlatılamadı:", e));
+        muzikDongusu.play().catch(e => console.log("Müzik başlatılamadı:", e));
+    }
+
+    function muzikDurdur() {
+        arkaPlanMuzigi.pause();
+        arkaPlanMuzigi.currentTime = 0;
+        muzikDongusu.pause();
+        muzikDongusu.currentTime = 0;
+    }
+    //ates edince ses efektini çalan fonksiyon
+    function atesSesiCal() {
+        atesSesi.volume = 0.5;
+        atesSesi.currentTime = 0;
+        atesSesi.play().catch(e => console.log("Ateş sesi çalınamadı:", e));
+    }
+    //normal ateş etme, özellik alınca devre dışı kalıyor
+    function normalAtesEt(hedefX, hedefY) {
+        if (oyuncu.yenidenDolduruluyor) return;
+        if (oyuncu.sonAtisZamani > 0) return;
+        if (oyuncu.mermi <= 0) {
+            silahiDoldur();
+            return;
+        }
+
+        atesSesiCal();
+        oyuncu.mermi--;
+        oyuncu.sonAtisZamani = oyuncu.atisBeklemeSuresi;
+
+        //merminin doğru yön ve hızda ateş etmesini sağlayan fonksiyon anlamadığım bir sorun çıktığı için ai yardımı ile yazdım ai.md dosyasında var
+        const dx = hedefX - oyuncu.x;
+        const dy = hedefY - oyuncu.y;
+        const uzunluk = Math.hypot(dx, dy) || 1;
+
+        //ateş edince tepmeyi oluşturan bölüm
+        const geriTepmeGucu = 20;
+        const geriTepmeX = -(dx/uzunluk) * geriTepmeGucu;
+        const geriTepmeY = -(dy/uzunluk) * geriTepmeGucu;
+
+        oyuncu.x += geriTepmeX;
+        oyuncu.y += geriTepmeY;
+
+        oyuncu.x = Math.max(oyuncu.boyut/2, Math.min(canvasWidth-oyuncu.boyut/2, oyuncu.x));
+        oyuncu.y = Math.max(oyuncu.boyut/2, Math.min(canvasHeight-oyuncu.boyut/2, oyuncu.y));
+
+        oyuncuMermileri.push(new Mermi(oyuncu.x, oyuncu.y, dx/uzunluk * 10, dy/uzunluk * 10, '#ffff00', 'oyuncu'));
+
+        if (oyuncu.mermi <= 0) {
+            silahiDoldur();
+        }
+    }
+    //ozellik alınca gelen ates etme biçimi, 3 mermi atesliyor onun dışında normal ateş et fonksiyonuyla aynı
+    function pompaliAtesEt(hedefX, hedefY) {
+        if (oyuncu.yenidenDolduruluyor) return;
+        if (oyuncu.sonAtisZamani > 0) return;
+        if (oyuncu.mermi <= 0) {
+            silahiDoldur();
+            return;
+        }
+
+        atesSesiCal();
+        oyuncu.mermi--;
+        oyuncu.sonAtisZamani = oyuncu.atisBeklemeSuresi;
+
+        const dx = hedefX - oyuncu.x;
+        const dy = hedefY - oyuncu.y;
+        const uzunluk = Math.hypot(dx, dy) || 1;
+
+        const geriTepmeGucu = 20;
+        const geriTepmeX = -(dx/uzunluk) * geriTepmeGucu;
+        const geriTepmeY = -(dy/uzunluk) * geriTepmeGucu;
+
+        oyuncu.x += geriTepmeX;
+        oyuncu.y += geriTepmeY;
+
+        oyuncu.x = Math.max(oyuncu.boyut/2, Math.min(canvasWidth-oyuncu.boyut/2, oyuncu.x));
+        oyuncu.y = Math.max(oyuncu.boyut/2, Math.min(canvasHeight-oyuncu.boyut/2, oyuncu.y));
+
+        oyuncuMermileri.push(new Mermi(oyuncu.x, oyuncu.y, dx/uzunluk * 10, dy/uzunluk * 10, '#ffff00', 'oyuncu'));
+
+        // pompalı fonksitonunun diğer 2 mermisinin çıkış açısı
+        const yayilmaAcisi = Math.PI / 12; // 15 derece
+        const sagAci = Math.atan2(dy, dx) + yayilmaAcisi;
+        const solAci = Math.atan2(dy, dx) - yayilmaAcisi;
+
+        oyuncuMermileri.push(new Mermi(
+            oyuncu.x, 
+            oyuncu.y, 
+            Math.cos(sagAci) * 10, 
+            Math.sin(sagAci) * 10, 
+            '#ffff00', 
+            'oyuncu'
+        ));
+        //ana merminin yanına diğer 2 merminin eklenmesi
+        oyuncuMermileri.push(new Mermi(
+            oyuncu.x, 
+            oyuncu.y, 
+            Math.cos(solAci) * 10, 
+            Math.sin(solAci) * 10, 
+            '#ffff00', 
+            'oyuncu'
+        ));
+        //mermi bitince otomatik doldurma fonksiyonunu çağıröma
+        if (oyuncu.mermi <= 0) {
+            silahiDoldur();
+        }
+    }
+
+    function atesEt(hedefX, hedefY) {
+        // ozelliğin olup olmadığının kontrolü
+        const PompaliAtesAktif = aktifOyuncuOzellikleri.some(ozellik => ozellik.key === 'POMPALI_ATES');
+        //konhtrol sonucu ozellik yoksa normal varsa üçlü mermi ateşleyen fonksiyonları çağırılması
+        if (PompaliAtesAktif) {
+            pompaliAtesEt(hedefX, hedefY);
+        } else {
+            normalAtesEt(hedefX, hedefY);
+        }
+    }
+
+    function silahiDoldur() {
+        if (oyuncu.yenidenDolduruluyor || oyuncu.mermi === oyuncu.maxMermi) return;
+        oyuncu.yenidenDolduruluyor = true;
+        oyuncu.dolumZamani = oyuncu.dolumSuresi;
+        console.log("Dolum ediliyor...");
+    }
+
+    //düşman sınıfının tanımlanması
+    class Dusman {
+        constructor(x, y, boyut, renk, can = 3) {
+            this.x = x;
+            this.y = y;
+            //düşmanların özellikleri
+            this.boyut = boyut;
+            this.renk = renk;
+            this.can = can;
+            this.baslangicCan = can;
+            //birden fazla alınabilen özelliklerin sayısını tutan değişkenler
+            this.buyukBoyutSayisi = 0; 
+            this.hizliDusmanSayisi = 0;
+        }
+
+        //düşmanın ekran sınırlarından çıkmasını engelleyen fonksiyon
+        ekranaSinirla() {
+            const yariBoyut = this.boyut/2;
+            if (this.x - yariBoyut < 0) this.x = yariBoyut;
+            if (this.x + yariBoyut > canvasWidth) this.x = canvasWidth - yariBoyut;
+            if (this.y - yariBoyut < 0) this.y = yariBoyut;
+            if (this.y + yariBoyut > canvasHeight) this.y = canvasHeight - yariBoyut;
+        }
+
+        //düşman ölüm kontrolü
+        olduMu() { 
+            return this.can <= 0; 
+        }
+
+        //düşman/oyuncu çarpışma kontrolü
+        oyuncuylaCarpisiyor() {
+            if (oyunDurumu !== OYUN_DURUMU.OYNUYOR) return;
+            const mesafe = Math.hypot(this.x - oyuncu.x, this.y - oyuncu.y);
+            if (mesafe < this.boyut/2 + oyuncu.boyut/2) {
+                oyuncu.can -= 1;
+                //temasta direk ölmesi için yüksek bir hasar alma değeri
+                this.hasarAl(10);
+            }
+        }
+
+        //mermi ile düşmana hasar veren fonksiyon
+        hasarAl(miktar = 1) { 
+            this.can -= miktar; 
+        }
+
+        //düşmanı ekrana çizen fonksiyon
+        ciz() {
+            ctx.fillStyle = this.renk;
+            ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2, this.boyut, this.boyut);
+            //düşman can barı çizme
+            if (this.can < this.baslangicCan && this.can > 0) {
+            ctx.fillStyle = 'red';
+                ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2 - 10, this.boyut, 5);
+            ctx.fillStyle = 'lime';
+                ctx.fillRect(this.x - this.boyut/2, this.y - this.boyut/2 - 10, this.boyut * (this.can / this.baslangicCan), 5);
+            }
+        }
+    }
+
+    //kırmızı düşman sınıfı
+    class KirmiziDusman extends Dusman {
+        constructor(x, y) { 
+            super(x, y, 40, '#ff0000', 3); 
+            this.yon = this.rastgeleYonAl(); 
+            this.kosmaMesafesi = 180; 
+            this.kosmaHizi = 8 * (1 + dusmanHizOzellik * 0.4); //özelliğin her seviyesinde %40 hız ekler
+            this.beklemeZamani = 0; 
+        }
+
+        //atılacak yönü belirleme
+        rastgeleYonAl() { 
+            const aci = Math.random()*2*Math.PI; 
+            return { x: Math.cos(aci), y: Math.sin(aci) }; 
+        }
+        guncelle() { 
+            if (this.beklemeZamani > 0) { 
+                this.beklemeZamani--; 
+                return; 
+            } 
+            const adim = Math.min(this.kosmaHizi, this.kosmaMesafesi); 
+            this.x += this.yon.x * adim; 
+            this.y += this.yon.y * adim; 
+            this.kosmaMesafesi -= adim; 
+
+            //sonraki 4 fonksiyon düşmanların çarpma ve sekme kontrolü içimn
+            const yariBoyut = this.boyut/2;
+            //sol kenara çarpma
+            if (this.x - yariBoyut < 0) {
+                this.x = yariBoyut;
+                this.yon.x *= -1;
+            }
+            //sağ kenara çarpma
+            if (this.x + yariBoyut > canvasWidth) {
+                this.x = canvasWidth - yariBoyut;
+                this.yon.x *= -1;
+            }
+            //üste çarpma
+            if (this.y - yariBoyut < 0) {
+                this.y = yariBoyut;
+                this.yon.y *= -1;
+            }
+            //alta çarpma
+            if (this.y + yariBoyut > canvasHeight) {
+                this.y = canvasHeight - yariBoyut;
+                this.yon.y *= -1;
+            }
+
+            //düşmanın atılması bittiğinde yeni bir yön belirler
+            if (this.kosmaMesafesi <= 0) { 
+                this.kosmaMesafesi = 120 + Math.random() * 60; 
+                this.beklemeZamani = Math.floor(40 + Math.random() * 50); 
+                this.yon = this.rastgeleYonAl(); 
+            } 
+        }
+    }
+
+    //sürekli hareket eden yesil dusman sınıfı
+    class YesilDusman extends Dusman {
+        constructor(x, y) { 
+            super(x, y, 40, '#00ff00', 2); 
+            const aci = Math.random()*2*Math.PI; 
+            this.vx = Math.cos(aci)*4; 
+            this.vy = Math.sin(aci)*4; 
+        }
+
+        guncelle() { 
+            this.x += this.vx; 
+            this.y += this.vy; 
+            const yariBoyut = this.boyut/2; 
+            if (this.x - yariBoyut < 0 || this.x + yariBoyut > canvasWidth) this.vx *= -1; 
+            if (this.y - yariBoyut < 0 || this.y + yariBoyut > canvasHeight) this.vy *= -1; 
+            this.ekranaSinirla(); 
+        }
+    }
+
+    //ateş eden pembe düşman sınıfı
+    class PembeDusman extends Dusman {
+        constructor(x, y) { 
+            super(x, y, 40, '#ff69b4', 4); 
+            //rastgele ateş yönü belirleme
+            const aci = Math.random()*2*Math.PI; 
+            this.vx = Math.cos(aci)*2; 
+            this.vy = Math.sin(aci)*2; 
+
+            this.atesAraligi = 100 + Math.random() * 40; 
+            this.atesZamani = Math.floor(Math.random() * this.atesAraligi); 
+        }
+
+        guncelle() { 
+            this.x += this.vx; 
+            this.y += this.vy; 
+            const yariBoyut = this.boyut/2; 
+            if (this.x - yariBoyut < 0 || this.x + yariBoyut > canvasWidth) this.vx *= -1; 
+            if (this.y - yariBoyut < 0 || this.y + yariBoyut > canvasHeight) this.vy *= -1; 
+            this.ekranaSinirla(); 
+            
+            //ateş mekaniği kontrolü
+            if (++this.atesZamani >= this.atesAraligi) { 
+                this.atesZamani = 0; 
+                this.mermiAt(); 
+            } 
+        }
+
+        //ateş mekaniği
+        mermiAt() { 
+            for (let i = 0; i < 3; i++) { 
+                const oyuncuyaAci = Math.atan2(oyuncu.y - this.y, oyuncu.x - this.x); 
+                const yayilma = (Math.random() - 0.5) * 0.5; 
+                const sonAci = oyuncuyaAci + yayilma; 
+                dusmanMermileri.push(new Mermi(this.x, this.y, Math.cos(sonAci)*4, Math.sin(sonAci)*4, '#ff00ff', 'dusman')); 
+            }
+        }
+    }
+
+    //Boss sınıfı
+    class Boss extends Dusman {
+        constructor(x, y, boyut, renk, can) {
+            super(x, y, boyut, renk, can);
+            this.hareketZamani = 0;
+            this.hareketAraligi = 30;
+            this.hiz = 5;
+            this.hedefX = x;
+            this.hedefY = y;
+        }
+
+        //hareketini güncelleme normal düşman sınıfından farkı yok
+        guncelle() {
+            this.hareketZamani++;
+            if (this.hareketZamani >= this.hareketAraligi) {
+                this.hareketZamani = 0;
+                this.hedefX = Math.random() * (canvasWidth - this.boyut) + this.boyut / 2;
+                this.hedefY = Math.random() * (canvasHeight - this.boyut) + this.boyut / 2;
+            }
+
+            const dx = this.hedefX - this.x;
+            const dy = this.hedefY - this.y;
+            const mesafe = Math.hypot(dx, dy);
+
+            if (mesafe > this.hiz) {
+                this.x += (dx / mesafe) * this.hiz;
+                this.y += (dy / mesafe) * this.hiz;
+            } else {
+                this.x = this.hedefX;
+                this.y = this.hedefY;
+            }
+            this.ekranaSinirla();
+        }
+    }
+    let tumDusmanlar = [];//düşmanların bilgilerini tutan dizi
+
+    let mevcutSeviye = 1;//mevcut oyun seviyesi
+    let mevcutDalga = 0;//seviyedeki mevcut dalga
+    let dalgadaKalanDusmanlar = 0;//kalan dusman sayısı
+
+    const BOSS_ONCESI_NORMAL_SEVIYELER = 3;
+
+    //bölüm sonu portalı
+    const portal = {
+        x: canvasWidth / 2,
+        y: canvasHeight / 2,
+        boyut: 70,
+        renk: '#00ffff',
+        aktif: false,
+        hedefSeviye: 0,
+        dalgaBoyutu: 0,
+        nabizHizi: 0.1
+    };
+
+    //seviye ayarları ve düşman özellikleri
+    const seviyeAyarlari = [
+        //seviye 1-3 sadece kırmızı düşmanlar
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 2,can: 2}],[{tip: KirmiziDusman,sayi: 3,can: 3}],[{tip: KirmiziDusman,sayi: 4,can: 3}]]},
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 3,can: 3}],[{tip: KirmiziDusman,sayi: 4,can: 3}],[{tip: KirmiziDusman,sayi: 5,can: 3}]]},
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 4,can: 3}],[{tip: KirmiziDusman,sayi: 5,can: 3}],[{tip: KirmiziDusman,sayi: 6,can: 3}]]},
+        
+        //seviye 4 ilk boss
+        { dalgalar: [[{tip: Boss,sayi: 1,can: 50,boyut: 100,renk: '#af0909'}]],bosSeviyesi: true},
+
+        //seviye 5-7 kırmızı ve yeşil düşmanlar
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 2,can: 3},{tip: YesilDusman,sayi: 2,can: 3}],
+                     [{tip: KirmiziDusman,sayi: 3,can: 3},{tip: YesilDusman,sayi: 2,can: 4}],
+                     [{tip: KirmiziDusman,sayi: 3,can: 4},{tip: YesilDusman,sayi: 3,can: 4}]]},
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 3,can: 4},{tip: YesilDusman,sayi: 3,can: 4}],
+                     [{tip: KirmiziDusman,sayi: 4,can: 4},{tip: YesilDusman,sayi: 3,can: 5}],
+                     [{tip: KirmiziDusman,sayi: 4,can: 5},{tip: YesilDusman,sayi: 4,can: 5}]]},
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 4,can: 5},{tip: YesilDusman,sayi: 4,can: 5}],
+                     [{tip: KirmiziDusman,sayi: 5,can: 5},{tip: YesilDusman,sayi: 4,can: 6}],
+                     [{tip: KirmiziDusman,sayi: 5,can: 6},{tip: YesilDusman,sayi: 5,can: 6}]]},
+
+        //seviye 8 ikinci boss
+        { dalgalar: [[{tip: Boss,sayi: 1,can: 100,boyut: 120,renk: '#256343'}]],bosSeviyesi: true},
+
+        //seviye 9-11 tüm düşman tipleri
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 2,can: 4},{tip: YesilDusman,sayi: 2,can: 4},{tip: PembeDusman,sayi: 1,can: 5}],
+                     [{tip: KirmiziDusman,sayi: 3,can: 4},{tip: YesilDusman,sayi: 2,can: 5},{tip: PembeDusman,sayi: 2,can: 5}],
+                     [{tip: KirmiziDusman,sayi: 3,can: 5},{tip: YesilDusman,sayi: 3,can: 5},{tip: PembeDusman,sayi: 2,can: 6}]]},
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 3,can: 5},{tip: YesilDusman,sayi: 3,can: 5},{tip: PembeDusman,sayi: 2,can: 6}],
+                     [{tip: KirmiziDusman,sayi: 4,can: 5},{tip: YesilDusman,sayi: 3,can: 6},{tip: PembeDusman,sayi: 3,can: 6}],
+                     [{tip: KirmiziDusman,sayi: 4,can: 6},{tip: YesilDusman,sayi: 4,can: 6},{tip: PembeDusman,sayi: 3,can: 7}]]},
+        { dalgalar: [[{tip: KirmiziDusman,sayi: 4,can: 6},{tip: YesilDusman,sayi: 4,can: 6},{tip: PembeDusman,sayi: 3,can: 7}],
+                     [{tip: KirmiziDusman,sayi: 5,can: 6},{tip: YesilDusman,sayi: 4,can: 7},{tip: PembeDusman,sayi: 4,can: 7}],
+                     [{tip: KirmiziDusman,sayi: 5,can: 7},{tip: YesilDusman,sayi: 5,can: 7},{tip: PembeDusman,sayi: 4,can: 8}]]},
+
+        //seviye 12 son boss
+        { dalgalar: [[{tip: Boss,sayi: 1,can: 150,boyut: 150,renk: '#1dafd6'}]],bosSeviyesi: true}
+    ];
+
+    //mevcut seviyenin boss seviyesi olup olmadığını kontrol eder
+    function BossSeviyesiMi() {
+        const seviyeAyar = seviyeAyarlari[mevcutSeviye - 1];
+        return seviyeAyar && seviyeAyar.bosSeviyesi;
+    }
+
+    //mevcut seviyedeki dalga sayısını hesaplar
+    function mevcutSeviyedekiDalgaSayisi() {
+        const seviyeAyar = seviyeAyarlari[mevcutSeviye - 1];
+        return seviyeAyar ? seviyeAyar.dalgalar.length : 0;
+    }
+
+    //düşmanların doğacağı konumu belirler
+    function dogumPozisyonuAl() {
+        let x, y;
+        const kenar = 50;
+        const taraf = Math.floor(Math.random() * 4);
+        if (taraf === 0) { x = Math.random() * canvasWidth; y = -kenar; }
+        else if (taraf === 1) { x = Math.random() * canvasWidth; y = canvasHeight + kenar; }
+        else if (taraf === 2) { x = -kenar; y = Math.random() * canvasHeight; }
+        else { x = canvasWidth + kenar; y = Math.random() * canvasHeight; }
+        return { x, y };
+    }
+
+    //dalga için düşmanları oluşturur
+    async function dalgaIcinDusmanlariOlustur() {
+        tumDusmanlar = [];
+        dusmanMermileri = [];
+        dalgadaKalanDusmanlar = 0;
+
+        const seviyeAyar = seviyeAyarlari[mevcutSeviye - 1];
+        if (!seviyeAyar || !seviyeAyar.dalgalar[mevcutDalga - 1]) {
+            console.error(`Ayar hatası: Seviye ${mevcutSeviye}, Dalga ${mevcutDalga}`);
+            if (mevcutSeviye >= seviyeAyarlari.length && mevcutSeviyedekiDalgaSayisi() === 0) {
+                oyunDurumu = OYUN_DURUMU.ZAFER;
+                } else {
+                console.warn("Hata veya dalga sonu nedeniyle sonraki seviyeye geçiliyor.");
+                mevcutSeviye++;
+                if (mevcutSeviye > seviyeAyarlari.length) {
+                    oyunDurumu = OYUN_DURUMU.ZAFER;
+                } else {
+                    yeniSeviyeBaslat(mevcutSeviye);
+                }
+            }
+            return;
+        }
+
+        const dalgaDogumlar = seviyeAyar.dalgalar[mevcutDalga - 1];//
+        let olusturulacakDusmanlar = [];
+
+        dalgaDogumlar.forEach(dogumGrubu => {
+            for (let i = 0; i < dogumGrubu.sayi; i++) {
+                const pos = dogumPozisyonuAl();
+                let dogumX = pos.x;
+                let dogumY = pos.y;
+                //oluşturulacak düşnan boss ise doğum noktasını belirliyor
+                if (dogumGrubu.tip === Boss) {
+                    dogumX = canvasWidth / 2;
+                    dogumY = canvasHeight / 4;
+                }
+                //düşmanın bilgilerini diziye ekler
+                olusturulacakDusmanlar.push({
+                    tip: dogumGrubu.tip,
+                    x: dogumX,
+                    y: dogumY,
+                    can: dogumGrubu.can || 3,
+                    boyut: dogumGrubu.boyut || 40,
+                    renk: dogumGrubu.renk || 'gray'
+                });
+            }
+        });
+
+        setTimeout(() => {
+            if (oyunDurumu !== OYUN_DURUMU.OYNUYOR) return;
+            olusturulacakDusmanlar.forEach(veri => {
+                let dusman;
+                if (veri.tip === KirmiziDusman) dusman = new KirmiziDusman(veri.x, veri.y);
+                else if (veri.tip === YesilDusman) dusman = new YesilDusman(veri.x, veri.y);
+                else if (veri.tip === PembeDusman) dusman = new PembeDusman(veri.x, veri.y);
+                else if (veri.tip === Boss) dusman = new Boss(veri.x, veri.y, veri.boyut, veri.renk, veri.can);
+                else { console.error("Bilinmeyen düşman tipi:", veri.tip); return; }
+
+                dusman.can = veri.can;
+                dusman.baslangicCan = veri.can;
+                tumDusmanlar.push(dusman);
+                dalgadaKalanDusmanlar++;
+            });
+            console.log(`Seviye ${mevcutSeviye} - Dalga ${mevcutDalga}: ${dalgadaKalanDusmanlar} düşman oluşturuldu.`);
+        }, 1000);
+    }
+
+    //sonraki dalgayı başlatır
+    function sonrakiDalgaBaslat() {
+        mevcutDalga++;
+        if (mevcutDalga > mevcutSeviyedekiDalgaSayisi()) {
+            portaliAktifEt();
+            return;
+        }
+        dalgaIcinDusmanlariOlustur();
+    }
+
+    //yeni seviyeyi başlatır
+    function yeniSeviyeBaslat(seviyeNumarasi) {
+        mevcutSeviye = seviyeNumarasi;
+        mevcutDalga = 0;
+        portal.aktif = false;
+        oyuncuMermileri = [];
+        dusmanMermileri = [];
+        tumDusmanlar = [];
+        console.log(`Seviye ${mevcutSeviye} başlatılıyor. BOSSSeviyesi: ${BossSeviyesiMi()}`);
+        sonrakiDalgaBaslat();
+    }
+
+    //portali aktif eder
+    function portaliAktifEt() {
+        portal.aktif = true;
+        portal.x = canvasWidth / 2;
+        portal.y = canvasHeight / 2;
+        portal.hedefSeviye = mevcutSeviye + 1;
+        portal.dalgaBoyutu = 0;
+        
+        //seviye sonunda rastgele özellik seç
+        if (!BossSeviyesiMi()) {
+            rastgeleOzellikSec();
+        }
+
+        //son boss'tan sonra oyunu bitir
+        if (mevcutSeviye >= seviyeAyarlari.length) {
+            oyunDurumu = OYUN_DURUMU.ZAFER;
+            canvas.classList.remove('playing');
+        }
+    }
+
+    //son alınan özellikleri tutan dizi
+    let sonAlinanOzellikler = [];
+    let ozellikGosterimZamani = 0;
+    const OZELLIK_GOSTERIM_SURESI = 180;
+
+    //oyuncu özellikleri
+    let hizliHareketOzellik = 0;
+    let fazlaMermiOzellik = false;
+    let gecenMermiOzellik = false;
+    let hizliDolumOzellik = 0;
+    let ekstraCanOzellik = 0;
+    let pompaliAtesOzellik = false;
+
+    //düşman özellikleri
+    let dusmanBoyutOzellik = 0;
+    let dusmanHizOzellik = 0;
+    let dusmanCanOzellik = 0;
+
+    //oyun durumunu günceller
+    function guncelle() {
+        //yeni özellik bildirimi süresini güncelle
+        if (ozellikGosterimZamani > 0) {
+            ozellikGosterimZamani--;
+        }
+
+        //oyun oynanmıyorsa güncellemeyi durdur
+        if (oyunDurumu !== OYUN_DURUMU.OYNUYOR) {
+            if (portal.aktif && oyunDurumu === OYUN_DURUMU.OYNUYOR) {
+                portal.dalgaBoyutu += portal.nabizHizi;
+            }
+            return;
+        }
+
+        //atış bekleme süresini güncelle
+        if (oyuncu.sonAtisZamani > 0) {
+            oyuncu.sonAtisZamani--;
+        }
+
+        //dolum işlemini kontrol et
+        if (oyuncu.yenidenDolduruluyor) {
+            oyuncu.dolumZamani--;
+            if (oyuncu.dolumZamani <= 0) {
+                oyuncu.mermi = oyuncu.maxMermi;
+                oyuncu.yenidenDolduruluyor = false;
+                console.log("Dolum tamamlandı!");
+            }
+        }
+
+        //r tuşu ile şarjör değiştirme
+        if (tuslar['r'] && !oyuncu.yenidenDolduruluyor && oyuncu.mermi < oyuncu.maxMermi) {
+            silahiDoldur();
+        }
+
+        //oyuncu hareketi
+        if (tuslar['a']) oyuncu.x -= oyuncu.hiz;
+        if (tuslar['d']) oyuncu.x += oyuncu.hiz;
+        if (tuslar['w']) oyuncu.y -= oyuncu.hiz;
+        if (tuslar['s']) oyuncu.y += oyuncu.hiz;
+
+        //oyuncuyu ekran sınırları içinde tut
+        oyuncu.x = Math.max(oyuncu.boyut/2, Math.min(canvasWidth-oyuncu.boyut/2, oyuncu.x));
+        oyuncu.y = Math.max(oyuncu.boyut/2, Math.min(canvasHeight-oyuncu.boyut/2, oyuncu.y));
+
+        //oyuncu mermilerini güncelle
+        for (let i = oyuncuMermileri.length - 1; i >= 0; i--) {
+            oyuncuMermileri[i].guncelle();
+            if (oyuncuMermileri[i].ekranDisinda()) oyuncuMermileri.splice(i, 1);
+        }
+
+        //düşman mermilerini güncelle
+        for (let i = dusmanMermileri.length - 1; i >= 0; i--) {
+            dusmanMermileri[i].guncelle();
+            if (dusmanMermileri[i].ekranDisinda()) {
+                dusmanMermileri.splice(i, 1);
+            } else if (Math.hypot(dusmanMermileri[i].x - oyuncu.x, dusmanMermileri[i].y - oyuncu.y) < dusmanMermileri[i].boyut / 2 + oyuncu.boyut / 2) {
+                oyuncu.can--;
+                dusmanMermileri.splice(i, 1);
+            }
+        }
+
+        //düşmanları güncelle
+        let buKaredeDusmanOlduMu = false;
+        for (let ei = tumDusmanlar.length - 1; ei >= 0; ei--) {
+            const dusman = tumDusmanlar[ei];
+            dusman.guncelle();
+            
+            //geçen mermi özelliğini kontrol et
+            const gecenMermiAktif = aktifOyuncuOzellikleri.some(ozellik => ozellik.key === 'GECEN_MERMI');
+            
+            //mermi düşman çarpışma kontrolü
+            for (let mi = oyuncuMermileri.length - 1; mi >= 0; mi--) {
+                const mermi = oyuncuMermileri[mi];
+                if (Math.hypot(mermi.x - dusman.x, mermi.y - dusman.y) < mermi.boyut / 2 + dusman.boyut / 2) {
+                    dusman.hasarAl();
+                    if (!gecenMermiAktif) {
+                        oyuncuMermileri.splice(mi, 1);
+                    }
+                    break;
+                }
+            }
+            
+            //düşman oyuncu çarpışma kontrolü
+            dusman.oyuncuylaCarpisiyor();
+            if (dusman.olduMu()) {
+                tumDusmanlar.splice(ei, 1);
+                dalgadaKalanDusmanlar--;
+                buKaredeDusmanOlduMu = true;
+            }
+        }
+
+        //dalga kontrolü
+        if (buKaredeDusmanOlduMu && dalgadaKalanDusmanlar <= 0 && mevcutDalga > 0 && !portal.aktif) {
+            if (mevcutDalga >= mevcutSeviyedekiDalgaSayisi()) {
+                portaliAktifEt();
+            } else {
+                sonrakiDalgaBaslat();
+            }
+        }
+
+        //portal kontrolü
+        if (portal.aktif) {
+            portal.dalgaBoyutu += portal.nabizHizi;
+            const portalaMesafe = Math.hypot(oyuncu.x - portal.x, oyuncu.y - portal.y);
+            if (portalaMesafe < oyuncu.boyut / 2 + portal.boyut / 2) {
+                if (portal.hedefSeviye > seviyeAyarlari.length) {
+                    oyunDurumu = OYUN_DURUMU.ZAFER;
+                    canvas.classList.remove('playing');
+                } else {
+                    yeniSeviyeBaslat(portal.hedefSeviye);
+                }
+            }
+        }
+
+        //oyuncu öldüyse oyunu bitir
+        if (oyuncu.can <= 0) {
+            oyuncu.can = 0;
+            oyunDurumu = OYUN_DURUMU.OYUN_BITTI;
+            canvas.classList.remove('playing');
+        }
+    }
+
+    //başlangıç ekranını çizer
+    function baslangicEkraniCiz() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '48px Arial';
+        ctx.fillText('Adil Kareler', canvasWidth / 2, canvasHeight / 2 - 70);
+        ctx.font = '30px Arial';
+        ctx.fillText('Başlamak için Tıkla', canvasWidth / 2, canvasHeight / 2 + 20);
+        ctx.font = '18px Arial';
+        ctx.fillText('WASD: Hareket', canvasWidth / 2, canvasHeight / 2 + 70);
+        ctx.fillText('Fare Tiklama: Ates Et', canvasWidth / 2, canvasHeight / 2 + 100);
+        ctx.fillText('R: Silahi Yeniden Doldur', canvasWidth/2, canvasHeight/2 + 130);
+        ctx.fillText('T: Aktif Özellikleri Göster', canvasWidth/2, canvasHeight/2 + 160);
+        ctx.fillText('Kazanmak için 12. bölümün sonundaki boss\'u yenin!', canvasWidth / 2, canvasHeight / 2 + 190);
+    }
+
+    //oyun bitti ekranını çizer
+    function oyunBittiEkraniCiz() {
+        muzikDurdur();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '60px Arial';
+        ctx.fillText('Oyun Bitti!', canvasWidth / 2, canvasHeight / 2 - 50);
+        ctx.font = '30px Arial';
+        ctx.fillText('Tekrar Başlamak için Tıkla', canvasWidth / 2, canvasHeight / 2 + 30);
+    }
+
+    //zafer ekranını çizer
+    function zaferEkraniCiz() {
+        muzikDurdur();
+        ctx.fillStyle = 'rgba(20, 80, 20, 0.8)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '60px Arial';
+        ctx.fillText('ZAFER!', canvasWidth / 2, canvasHeight / 2 - 60);
+        ctx.font = '40px Arial';
+        ctx.fillText('Tüm Seviyeler Tamamlandı!', canvasWidth / 2, canvasHeight / 2);
+        ctx.font = '30px Arial';
+        ctx.fillText('Tekrar Oynamak için Tıkla', canvasWidth / 2, canvasHeight / 2 + 60);
+        
+        //son boss zafer mesajı
+        if (mevcutSeviye > seviyeAyarlari.length) {
+            ctx.font = '35px Arial';
+            ctx.fillText('Son Boss Yenildi!', canvasWidth / 2, canvasHeight / 2 + 120);
+            ctx.font = '25px Arial';
+            ctx.fillText('Tebrikler! Oyunu Başarıyla Tamamladınız!', canvasWidth / 2, canvasHeight / 2 + 170);
+        }
+    }
+
+    //oyun ekranını çizer
+    function oyunuCiz() {
+        ctx.fillStyle = oyuncu.renk;
+        ctx.fillRect(oyuncu.x-oyuncu.boyut/2, oyuncu.y-oyuncu.boyut/2, oyuncu.boyut, oyuncu.boyut);
+
+        tumDusmanlar.forEach(d => d.ciz());
+        oyuncuMermileri.forEach(m => m.ciz());
+        dusmanMermileri.forEach(m => m.ciz());
+
+        if (portal.aktif) {
+            const mevcutPortalBoyutu = portal.boyut + Math.sin(portal.dalgaBoyutu) * 10;
+            ctx.fillStyle = portal.renk;
+            ctx.globalAlpha = 0.7 + Math.sin(portal.dalgaBoyutu) * 0.2;
+            ctx.beginPath();
+            ctx.arc(portal.x, portal.y, mevcutPortalBoyutu / 2, 0, Math.PI * 2);
+            ctx.fill();
+            for(let i=0; i<3; i++) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 - i*0.05})`;
+                ctx.lineWidth = 2 + i;
+                ctx.beginPath();
+                ctx.arc(portal.x, portal.y, (mevcutPortalBoyutu / 2) * (0.8 - i*0.2) + Math.sin(portal.dalgaBoyutu + i) * 3, 0, Math.PI*2);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        //yeni özellik bildirimi
+        if (ozellikGosterimZamani > 0) {
+            const saydamlik = Math.min(1, ozellikGosterimZamani / (OZELLIK_GOSTERIM_SURESI / 2));
+            ctx.fillStyle = `rgba(0, 0, 0, ${0.7 * saydamlik})`;
+            ctx.fillRect(canvasWidth/2 - 200, canvasHeight/2 - 100, 400, 200);
+            
+            ctx.fillStyle = `rgba(255, 255, 255, ${saydamlik})`;
+            ctx.textAlign = 'center';
+            ctx.font = '24px Arial';
+            ctx.fillText('Yeni Özellik Kazanıldı!', canvasWidth/2, canvasHeight/2 - 60);
+        }
+
+        //t tuşuna basılıyken özellikleri göster
+        if (tuslar['t']) {
+            //yarı saydam siyah arka plan
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(canvasWidth/2 - 200, canvasHeight/2 - 200, 400, 400);
+            
+            //başlık
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.font = '30px Arial';
+            ctx.fillText('Aktif Özellikler', canvasWidth/2, canvasHeight/2 - 160);
+            
+            //oyuncu özellikleri
+            ctx.textAlign = 'left';
+            ctx.font = '24px Arial';
+            ctx.fillText('Oyuncu Özellikleri:', canvasWidth/2 - 180, canvasHeight/2 - 120);
+            
+            let y = canvasHeight/2 - 80;
+            ctx.font = '20px Arial';
+            if (aktifOyuncuOzellikleri.length > 0) {
+                aktifOyuncuOzellikleri.forEach(ozellik => {
+                    ctx.fillText(`✓ ${ozellik.ad}`, canvasWidth/2 - 160, y);
+                    ctx.font = '16px Arial';
+                    ctx.fillText(ozellik.aciklama, canvasWidth/2 - 160, y + 25);
+                    y += 50;
+                });
+        } else {
+                ctx.fillText('Oyuncu özelliği yok', canvasWidth/2 - 160, y);
+                y += 60;
+            }
+            
+            //düşman özellikleri
+            y += 20;
+            ctx.font = '24px Arial';
+            ctx.fillText('Düşman Özellikleri:', canvasWidth/2 - 180, y);
+            y += 30;
+            ctx.font = '20px Arial';
+            if (aktifDusmanOzellikleri.length > 0) {
+                aktifDusmanOzellikleri.forEach(ozellik => {
+                    ctx.fillText(`⚠ ${ozellik.ad}`, canvasWidth/2 - 160, y);
+                    ctx.font = '16px Arial';
+                    ctx.fillText(ozellik.aciklama, canvasWidth/2 - 160, y + 25);
+                    y += 50;
+                });
+            } else {
+                ctx.fillText('Düşman özelliği yok', canvasWidth/2 - 160, y);
+            }
+
+            //t tuşu bilgisi
+            ctx.textAlign = 'center';
+            ctx.font = '16px Arial';
+            ctx.fillText('T tuşunu bırakınca kapanır', canvasWidth/2, canvasHeight/2 + 160);
+        }
+
+        //normal hud bilgileri
+        ctx.fillStyle = 'white';
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`Can: ${oyuncu.can}`, 10, 10);
+
+        if (oyuncu.yenidenDolduruluyor) {
+            const dolumIlerlemesi = ((oyuncu.dolumSuresi - oyuncu.dolumZamani) / oyuncu.dolumSuresi) * 100;
+            ctx.fillText(`DOLDURULUYOR... (${dolumIlerlemesi.toFixed(0)}%)`, 10, 35);
+        } else {
+            ctx.fillText(`Mermi: ${oyuncu.mermi}/${oyuncu.maxMermi}`, 10, 35);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.fillText(`Seviye: ${mevcutSeviye}${BossSeviyesiMi() ? " (BOSS)" : ""}`, canvasWidth - 10, 10);
+        if (oyunDurumu === OYUN_DURUMU.OYNUYOR && !portal.aktif) {
+            ctx.fillText(`Dalga: ${mevcutDalga}/${mevcutSeviyedekiDalgaSayisi()}`, canvasWidth - 10, 35);
+            ctx.fillText(`Düşmanlar: ${dalgadaKalanDusmanlar}`, canvasWidth - 10, 60);
+        } else if (portal.aktif) {
+            ctx.fillText(`Portal Aktif!`, canvasWidth - 10, 35);
+        }
+    }
+
+    //oyun durumuna göre ekranı çizer
+    function ciz() {
+      ctx.clearRect(0,0,canvasWidth,canvasHeight);
+        if (oyunDurumu === OYUN_DURUMU.BASLANGIC_EKRANI) baslangicEkraniCiz();
+        else if (oyunDurumu === OYUN_DURUMU.OYNUYOR) oyunuCiz();
+        else if (oyunDurumu === OYUN_DURUMU.OYUN_BITTI) { oyunuCiz(); oyunBittiEkraniCiz(); }
+        else if (oyunDurumu === OYUN_DURUMU.ZAFER) { zaferEkraniCiz(); }
+    }
+
+    //oyuncuyu sıfırlar
+    function oyuncuyuSifirla() {
+        //tüm özellikleri sıfırla
+        hizliHareketOzellik = 0;
+        fazlaMermiOzellik = false;
+        gecenMermiOzellik = false;
+        hizliDolumOzellik = 0;
+        ekstraCanOzellik = 0;
+        pompaliAtesOzellik = false;
+        dusmanBoyutOzellik = 0;
+        dusmanHizOzellik = 0;
+        dusmanCanOzellik = 0;
+
+        //aktif özellik dizilerini temizle
+        aktifOyuncuOzellikleri = [];
+        aktifDusmanOzellikleri = [];
+
+        //özellik havuzlarını sıfırla
+        OYUNCU_OZELLIKLERI_HAVUZU.forEach(ozellik => ozellik.aktif = false);
+        DUSMAN_OZELLIKLERI_HAVUZU.forEach(ozellik => ozellik.aktif = false);
+
+        //oyuncu özelliklerini sıfırla
+        oyuncu.can = 3;
+        oyuncu.baslangicCan = 3;
+        oyuncu.hiz = 5;
+        oyuncu.maxMermi = 10;
+        oyuncu.mermi = oyuncu.maxMermi;
+        oyuncu.dolumSuresi = 60;
+        oyuncu.x = canvasWidth / 2;
+        oyuncu.y = canvasHeight / 2;
+        oyuncu.yenidenDolduruluyor = false;
+        oyuncu.dolumZamani = 0;
+    }
+
+    //oyunu başlatır
+    function oyunuBaslat() {
+        oyuncuyuSifirla();
+        tuslar = {};
+        mevcutSeviye = 1;
+        yeniSeviyeBaslat(mevcutSeviye);
+        oyunDurumu = OYUN_DURUMU.OYNUYOR;
+        canvas.classList.add('playing');
+        muzikBaslat();
+    }
+
+    //oyun döngüsünü başlatır
+    function oyunDongusu() {
+        guncelle();
+        ciz();
+        requestAnimationFrame(oyunDongusu);
+    }
+
+    let secilecekOzellikler = [];
+
+    //rastgele özellik seçer
+    function rastgeleOzellikSec() {
+        //aktif olmayan oyuncu özelliklerini filtrele
+        const kullanilabilirOyuncuOzellikleri = OYUNCU_OZELLIKLERI_HAVUZU.filter(ozellik => !ozellik.aktif);
+        //aktif olmayan düşman özelliklerini filtrele
+        const kullanilabilirDusmanOzellikleri = DUSMAN_OZELLIKLERI_HAVUZU.filter(ozellik => 
+            !ozellik.aktif || 
+            (ozellik.key === 'BUYUK_BOYUT' || ozellik.key === 'HIZLI_DUSMAN')
+        );
+
+        //eğer kullanılabilir özellik varsa rastgele bir tane seç
+        if (kullanilabilirOyuncuOzellikleri.length > 0) {
+            const rastgeleIndex = Math.floor(Math.random() * kullanilabilirOyuncuOzellikleri.length);
+            const secilenOzellik = kullanilabilirOyuncuOzellikleri[rastgeleIndex];
+            ozellikUygula(secilenOzellik, 'oyuncu');
+        }
+
+        //eğer kullanılabilir düşman özelliği varsa rastgele bir tane seç
+        if (kullanilabilirDusmanOzellikleri.length > 0) {
+            const rastgeleIndex = Math.floor(Math.random() * kullanilabilirDusmanOzellikleri.length);
+            const secilenOzellik = kullanilabilirDusmanOzellikleri[rastgeleIndex];
+            ozellikUygula(secilenOzellik, 'dusman');
+        }
+    }
+
+    //seçilen özelliği uygular
+    function ozellikUygula(ozellik, tip) {
+        ozellik.aktif = true;
+        
+        //önceki özellikleri temizle
+        sonAlinanOzellikler = [];
+        
+        if (tip === 'oyuncu') {
+            aktifOyuncuOzellikleri.push(ozellik);
+            switch(ozellik.key) {
+                case 'HIZLI_HAREKET':
+                    hizliHareketOzellik++;
+                    oyuncu.hiz = 5 * (1 + (hizliHareketOzellik * 0.5));
+                    break;
+                case 'FAZLA_MERMI':
+                    fazlaMermiOzellik = true;
+                    oyuncu.maxMermi = 10 + (fazlaMermiOzellik ? 5 : 0);
+                    oyuncu.mermi = oyuncu.maxMermi;
+                    break;
+                case 'GECEN_MERMI':
+                    gecenMermiOzellik = true;
+                    break;
+                case 'HIZLI_DOLUM':
+                    hizliDolumOzellik++;
+                    oyuncu.dolumSuresi = 60 * Math.pow(0.7, hizliDolumOzellik);
+                    break;
+                case 'EKSTRA_CAN':
+                    ekstraCanOzellik++;
+                    oyuncu.baslangicCan = 3 + ekstraCanOzellik;
+                    oyuncu.can = oyuncu.baslangicCan;
+                    break;
+                case 'POMPALI_ATES':
+                    pompaliAtesOzellik = true;
+                    break;
+            }
+            //oyuncu özelliği alındığında diziye ekle
+            sonAlinanOzellikler.push({ ...ozellik, tip });
+        } else {
+            aktifDusmanOzellikleri.push(ozellik);
+            switch(ozellik.key) {
+                case 'BUYUK_BOYUT':
+                    dusmanBoyutOzellik++;
+                    break;
+                case 'HIZLI_DUSMAN':
+                    dusmanHizOzellik++;
+                    break;
+                case 'FAZLA_CAN':
+                    dusmanCanOzellik++;
+                    break;
+            }
+            //düşman özelliği alındığında diziye ekle
+            sonAlinanOzellikler.push({ ...ozellik, tip });
+        }
+
+        ozellikGosterimZamani = OZELLIK_GOSTERIM_SURESI;
+    }
+
+    //özellikler menüsünü çizer
+    function ozelliklerMenusuCiz() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '40px Arial';
+        ctx.fillText('Aktif Özellikler', canvasWidth / 2, 50);
+
+        //oyuncu özellikleri
+        ctx.textAlign = 'left';
+        ctx.font = '30px Arial';
+        ctx.fillText('Oyuncu Özellikleri:', 50, 120);
+        
+        let y = 170;
+        ctx.font = '20px Arial';
+        
+        //aktif oyuncu özelliklerini göster
+        if (hizliHareketOzellik > 0) {
+            ctx.font = '20px Arial';
+            ctx.fillText(`✓ Hızlı Hareket (${hizliHareketOzellik}X)`, 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Hareket hızı %${hizliHareketOzellik * 50} artar`, 70, y + 25);
+            y += 60;
+        }
+        if (fazlaMermiOzellik) {
+            ctx.font = '20px Arial';
+            ctx.fillText('✓ Fazla Mermi (1X)', 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText('Maksimum mermi sayısı 5 artar', 70, y + 25);
+            y += 60;
+        }
+        if (gecenMermiOzellik) {
+            ctx.font = '20px Arial';
+            ctx.fillText('✓ Geçen Mermi (1X)', 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText('Mermiler düşmanların içinden geçer', 70, y + 25);
+            y += 60;
+        }
+        if (hizliDolumOzellik > 0) {
+            ctx.font = '20px Arial';
+            ctx.fillText(`✓ Hızlı Dolum (${hizliDolumOzellik}X)`, 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Dolum süresi %${Math.round((1 - Math.pow(0.7, hizliDolumOzellik)) * 100)} azalır`, 70, y + 25);
+            y += 60;
+        }
+        if (ekstraCanOzellik > 0) {
+            ctx.font = '20px Arial';
+            ctx.fillText(`✓ Ekstra Can (${ekstraCanOzellik}X)`, 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Maksimum can ${ekstraCanOzellik} artar`, 70, y + 25);
+            y += 60;
+        }
+        if (pompaliAtesOzellik) {
+            ctx.font = '20px Arial';
+            ctx.fillText('✓ Dağılımlı Ateş (1X)', 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText('Her atışta 3 mermi dağılımlı şekilde atılır', 70, y + 25);
+            y += 60;
+        }
+        
+        if (!hizliHareketOzellik && !fazlaMermiOzellik && !gecenMermiOzellik && 
+            !hizliDolumOzellik && !ekstraCanOzellik && !pompaliAtesOzellik) {
+            ctx.fillText('Oyuncu özelliği yok', 70, y);
+            y += 60;
+        }
+        
+        //düşman özellikleri
+        y = 170;
+        ctx.textAlign = 'right';
+        ctx.font = '30px Arial';
+        ctx.fillText('Düşman Özellikleri:', canvasWidth - 50, y);
+        y += 30;
+        ctx.font = '20px Arial';
+        
+        //aktif düşman özelliklerini göster
+        if (dusmanBoyutOzellik > 0) {
+            ctx.fillText(`⚠ Büyük Boyut (${dusmanBoyutOzellik}X)`, canvasWidth - 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Düşmanlar %${dusmanBoyutOzellik * 30} daha büyük olur`, canvasWidth - 70, y + 25);
+            y += 60;
+        }
+        if (dusmanHizOzellik > 0) {
+            ctx.font = '20px Arial';
+            ctx.fillText(`⚠ Hızlı Düşman (${dusmanHizOzellik}X)`, canvasWidth - 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Düşmanlar %${dusmanHizOzellik * 40} daha hızlı hareket eder`, canvasWidth - 70, y + 25);
+            y += 60;
+        }
+        if (dusmanCanOzellik > 0) {
+            ctx.font = '20px Arial';
+            ctx.fillText(`⚠ Fazla Can (${dusmanCanOzellik}X)`, canvasWidth - 70, y);
+            ctx.font = '16px Arial';
+            ctx.fillText(`Düşmanlar ${dusmanCanOzellik} can daha fazla başlar`, canvasWidth - 70, y + 25);
+            y += 60;
+        }
+        
+        if (dusmanBoyutOzellik === 0 && dusmanHizOzellik === 0 && dusmanCanOzellik === 0) {
+            ctx.fillText('Düşman özelliği yok', canvasWidth - 70, y);
+        }
+
+        //t tuşu bilgisi
+        ctx.textAlign = 'center';
+        ctx.font = '16px Arial';
+        ctx.fillText('T tuşunu bırakınca kapanır', canvasWidth/2, canvasHeight - 55);
+    }
+
+    oyunDongusu();
+  </script>
+</body>
+</html>
