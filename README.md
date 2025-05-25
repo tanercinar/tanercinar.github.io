@@ -2,7 +2,8 @@
 Adil Kareler, HTML5 Canvas ve JavaScript kullanılarak geliştirilmiş bir 2D top-down shooter oyunudur. Oyuncu, mavi kare karakterini kontrol ederek düşman karelerin saldırılarından kaçar, silahını şarj edip ateş eder ve 12 seviye boyunca mücadeleyi sürdürür.
 
 # Oyun Adresi
-https://github.com/tanercinar/tanercinar.github.io
+[Oyunu Oyna](https://tanercinar.github.io/)
+
 
 # Oyun Özellikleri
 12 farklı seviye
