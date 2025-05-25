@@ -511,7 +511,7 @@
         { dalgalar: [[{tip: KirmiziDusman,sayi: 4,can: 3}],[{tip: KirmiziDusman,sayi: 5,can: 3}],[{tip: KirmiziDusman,sayi: 6,can: 3}]]},
         
         //seviye 4 ilk boss
-        { dalgalar: [[{tip: Boss,sayi: 1,can: 50,boyut: 100,renk: '#af0909'}]],bosSeviyesi: true},
+        { dalgalar: [[{tip: Boss,sayi: 1,can: 50,boyut: 100,renk: '#af0909'}]],bossSeviyesi: true},
 
         //seviye 5-7 kırmızı ve yeşil düşmanlar
         { dalgalar: [[{tip: KirmiziDusman,sayi: 2,can: 3},{tip: YesilDusman,sayi: 2,can: 3}],
@@ -525,7 +525,7 @@
                      [{tip: KirmiziDusman,sayi: 5,can: 6},{tip: YesilDusman,sayi: 5,can: 6}]]},
 
         //seviye 8 ikinci boss
-        { dalgalar: [[{tip: Boss,sayi: 1,can: 100,boyut: 120,renk: '#256343'}]],bosSeviyesi: true},
+        { dalgalar: [[{tip: Boss,sayi: 1,can: 100,boyut: 120,renk: '#256343'}]],bossSeviyesi: true},
 
         //seviye 9-11 tüm düşman tipleri
         { dalgalar: [[{tip: KirmiziDusman,sayi: 2,can: 4},{tip: YesilDusman,sayi: 2,can: 4},{tip: PembeDusman,sayi: 1,can: 5}],
@@ -539,13 +539,13 @@
                      [{tip: KirmiziDusman,sayi: 5,can: 7},{tip: YesilDusman,sayi: 5,can: 7},{tip: PembeDusman,sayi: 4,can: 8}]]},
 
         //seviye 12 son boss
-        { dalgalar: [[{tip: Boss,sayi: 1,can: 150,boyut: 150,renk: '#1dafd6'}]],bosSeviyesi: true}
+        { dalgalar: [[{tip: Boss,sayi: 1,can: 150,boyut: 150,renk: '#1dafd6'}]],bossSeviyesi: true}
     ];
 
     //mevcut seviyenin boss seviyesi olup olmadığını kontrol eder
     function BossSeviyesiMi() {
         const seviyeAyar = seviyeAyarlari[mevcutSeviye - 1];
-        return seviyeAyar && seviyeAyar.bosSeviyesi;
+        return seviyeAyar && seviyeAyar.bossSeviyesi;
     }
 
     //mevcut seviyedeki dalga sayısını hesaplar
