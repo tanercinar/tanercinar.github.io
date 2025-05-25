@@ -1541,4 +1541,163 @@ const uzunluk = Math.hypot(dx, dy) || 1;  // √(dx² + dy²), sıfıra bölmeyi
 Bu “veri-odaklı” yaklaşım hem yapılandırmaları kolayca değiştirmenizi, hem de kodu tek bir yerde tutup yönetmenizi sağlar. Yeni düşman türü eklemek, dalga sayısını değiştirmek veya boss seviyesi tanımlamak sadece konfigürasyona birkaç satır eklemek demektir.
 
 
+class Dusman {
+        constructor(x, y, boyut, renk, can = 3) {
+            this.x = x;
+            this.y = y;
+            this.boyut = boyut;
+            this.renk = renk;
+            this.can = can;
+            this.baslangicCan = can;
+            this.buyukBoyutSayisi = 0; 
+            this.hizliDusmanSayisi = 0;
+        }düşman sınıfının  sağlık çubuğunu kırmızı zemin ve yeşil dolgu ile çizen if bloğunu göster
+
+
+
+// Sağlık çubuğunu çizdiğiniz render/metodunuz içerisinde:
+if (this.can < this.baslangicCan && this.can > 0) {
+    // Kırmızı zemin
+    ctx.fillStyle = 'red';
+    ctx.fillRect(
+        this.x - this.boyut / 2,              // barın sol ucu
+        this.y - this.boyut / 2 - 10,          // barın düşman üstünde konumu
+        this.boyut,                           // toplam genişlik
+        5                                     // yükseklik
+    );
+
+    // Yeşil dolgu
+    ctx.fillStyle = 'lime';
+    ctx.fillRect(
+        this.x - this.boyut / 2,
+        this.y - this.boyut / 2 - 10,
+        this.boyut * (this.can / this.baslangicCan), // kalan can oranına göre genişlik
+        5
+    );
+}
+
+s ile. bu portala nasıl dalgalanma efekti veirim
+const portal = {
+        x: canvasWidth / 2,
+        y: canvasHeight / 2,
+        boyut: 70,
+        renk: '#00ffff',
+        aktif: false,
+        hedefSeviye: 0,
+        dalgaBoyutu: 0,
+        nabizHizi: 0.1
+    };
+
+
+ChatGPT said:
+
+Thought for 27 seconds
+Unity’deki Update() içinde bir Transform.localScale animasyonu gibi düşün: JS canvas’ta da her frame portal nesnesinin “nabız” değerini (burada dalgaBoyutu) güncelleyip, o değere göre bir daire çiziyorsun. Aşağıda tek bir HTML/JS dosyasında hem canvas’ı hem de portal dalga efektini nasıl yapabileceğini gösteren örnek var. Değişkenler Türkçe, adımlar Unity bilen birine anlatır gibi:
+
+html
+Copy
+Edit
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal Dalga Efekti</title>
+  <style>
+    body, html { margin:0; padding:0; overflow:hidden; background:#000; }
+    canvas { display:block; }
+  </style>
+</head>
+<body>
+<canvas id="oyunCanvas"></canvas>
+<script>
+  // --- Canvas ve temel setup ---
+  const canvas = document.getElementById('oyunCanvas');
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // --- Portal nesnesi (Unity’deki GameObject gibi) ---
+  const portal = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    boyut: 70,
+    renk: '#00ffff',
+    aktif: true,
+    dalgaBoyutu: 0,
+    nabizHizi: 30,     // piksel/sn cinsinden genişleme hızı
+    maxDalga: 100      // piksel cinsinden maksimum dalga yarıçapı
+  };
+
+  // --- Güncelleme (Unity’deki Update) ---
+  function guncelle(delta) {
+    if (!portal.aktif) return;
+    // nabız hızına göre dalga boyutunu arttır
+    portal.dalgaBoyutu += portal.nabizHizi * delta;
+    // eğer maksimumu geçtiyse sıfırla, böylece döngüsel olur
+    if (portal.dalgaBoyutu > portal.maxDalga) {
+      portal.dalgaBoyutu = 0;
+    }
+  }
+
+  // --- Çizim (Unity’deki OnRender veya SpriteRenderer gibi) ---
+  function ciz() {
+    // ana portal gövdesi
+    ctx.fillStyle = portal.renk;
+    ctx.beginPath();
+    ctx.arc(portal.x, portal.y, portal.boyut / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (portal.aktif) {
+      // dalga efekti için genişleyen daire
+      const yaricap = portal.boyut / 2 + portal.dalgaBoyutu;
+      // alfa, dalga büyüdükçe düşsün (1 → 0)
+      const alfa = Math.max(1 - portal.dalgaBoyutu / portal.maxDalga, 0);
+      ctx.strokeStyle = `rgba(0,255,255,${alfa})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(portal.x, portal.y, yaricap, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // --- Oyun döngüsü ---
+  let oncekiZaman = null;
+  function oyunDongusu(zaman) {
+    if (!oncekiZaman) oncekiZaman = zaman;
+    const delta = (zaman - oncekiZaman) / 1000; // saniyeye çevir
+    oncekiZaman = zaman;
+
+    // ekranı temizle (Unity’deki Camera.clear)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    guncelle(delta);
+    ciz();
+
+    requestAnimationFrame(oyunDongusu);
+  }
+
+  requestAnimationFrame(oyunDongusu);
+</script>
+</body>
+</html>
+Nasıl işliyor?
+
+nabizHizi ve dalgaBoyutu: Unity’deki Time.deltaTime ile transform.localScale animasyonu yapmaya benzer şekilde, burada delta ile çarparak her frame’de dalga yarıçapını büyütüyorsun.
+
+Daire çizimi: ctx.arc ile önce portal gövdesini, sonra dalga efektini çiziyorsun. Dalga için strokeStyle’ı alfa kanalıyla ayarlayıp gittikçe solmasını sağlıyoruz.
+
+Döngüsel efekt: Dalga büyüklüğü maxDalga’yı aşınca sıfırlanıyor, böylece sürekli vuran bir “nabız” efekti elde ediyorsun.
+
+Bu yapıyı kendi mevcut oyun döngüne entegre edebilir, renk, hız ve maksimum değerlerle oynayarak istediğin ritmi yakalayabilirsin.
+
+
+
+
+
+
+
 
