@@ -1,5 +1,5 @@
 # Adil Kareler
-Adil Kareler, HTML5 Canvas ve saf JavaScript kullanılarak geliştirilmiş bir 2D top-down shooter oyunudur. Oyuncu, mavi kare karakterini kontrol ederek düşman karelerin saldırılarından kaçar, silahını şarj edip ateş eder ve tüm seviyelerde adil mücadeleyi sürdürür.
+Adil Kareler, HTML5 Canvas ve JavaScript kullanılarak geliştirilmiş bir 2D top-down shooter oyunudur. Oyuncu, mavi kare karakterini kontrol ederek düşman karelerin saldırılarından kaçar, silahını şarj edip ateş eder ve 12 seviye boyunca mücadeleyi sürdürür.
 
 # Oyun Adresi
 https://github.com/tanercinar/tanercinar.github.io
@@ -25,7 +25,7 @@ Hızlı Hareket
 
 Fazla Mermi
 
-Geçen Mermi
+Delici Mermi
 
 Hızlı Şarj
 
@@ -59,7 +59,9 @@ Tüm dalga düşmanları temizleyip portalı aktif hale getirin, portala girerek
 
 
 # Zorluk
-Her seviye sonunda düşman dalgaları ve özellikleri rastgele güçlendirilir.
+Her seviye sonunda hem oyuncu düşman dalgaları ve özellikleri rastgele güçlendirilir.
+
+Düşmanların canı ve sayısı artar, yeni düşman türleri belirir.
 
 Boss seviyelerinde sabit olmayan, strateji gerektiren hareket paternleri.
 
@@ -68,7 +70,7 @@ Ses efektleri ve müzik
 # Teknik Detaylar
 Canvas API ile grafik çizimi
 
-Saf JavaScript (ES6 sınıfları, modüler yapı)
+JavaScript
 
 Kullanılan Sesler
 Arka Plan Müziği: https://pixabay.com/music/video-games-fight-for-the-future-336841/
@@ -87,4 +89,4 @@ https://www.youtube.com/watch?v=GN4P6Wfc-M4
 <img width="805" alt="Screenshot 2025-05-25 at 20 37 24" src="https://github.com/user-attachments/assets/bdd3eb56-d30a-4376-bc6d-a3ea5dfe31d4" />
 
 <img width="805" alt="Screenshot 2025-05-25 at 20 38 00" src="https://github.com/user-attachments/assets/770b7794-a6c8-49b5-a2ed-472a71a290be" />
-Oyunu oynadığınız için teşekkürler! İyi eğlenceler! 🎮✨
+
