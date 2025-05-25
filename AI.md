@@ -1,3 +1,10 @@
+AI dışında kıullandığım ana kaynak:
+https://www.youtube.com/watch?v=qJifBL1IfrU&list=PL9hmM3XvpAKqaJKvk2667MsF9oPDkIl_-
+
+
+
+Chatgpt promptları:
+
 bir javascript 2d topdown shooter oyununda düşmanlara bir atılma hareketi sağlamak istiyorum, rastgele bir yönde belirli bir pixel kadar atılıp bekleme süresine girip tekrar aynı hareketi yapması için nasıl bir şey yapabilirim kodu yazma nasıl yapabileceğimi anlat
 
 
